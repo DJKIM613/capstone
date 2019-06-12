@@ -20,9 +20,12 @@ for train_data in train_datas:
 test_images = []
 test_labels = []
 for test_data in test_datas:
+    if test_data[dimension] == 0 : continue
     test_images.append(test_data[0:dimension])
     test_labels.append(test_data[dimension:])
 
+print(test_labels)
+print(len(test_images), len(test_labels))
 train_images = np.asarray(train_images, dtype=np.float32)
 train_labels = np.asarray(train_labels, dtype=np.float32)
 
@@ -40,27 +43,21 @@ network.compile(optimizer='rmsprop',
                 metrics=['accuracy'])
 
 
-train_labels = to_categorical(train_labels)
-test_labels = to_categorical(test_labels)
+train_labels = to_categorical(train_labels, 2)
+test_labels = to_categorical(test_labels, 2)
 
-history = network.fit(train_images, train_labels, epochs=100, batch_size= 30, validation_data=(train_images, train_labels))
+k = 4
+num_val_samples = len(train_datas) // k
+for i in range(k):
+    val_images = train_images[i * num_val_samples : (i + 1) * num_val_samples]
+    val_labels = train_labels[i * num_val_samples : (i + 1) * num_val_samples]
 
+    partial_train_images = np.concatenate([train_images[:i * num_val_samples], train_images[:(i + 1) * num_val_samples]], axis = 0)
+    partial_train_labels = np.concatenate([train_labels[:i * num_val_samples], train_labels[:(i + 1) * num_val_samples]], axis = 0)
+    #print(partial_train_labels[0])
+    network.fit(partial_train_images, partial_train_labels, epochs = 100, batch_size = 1, verbose = 0)
+
+print(test_images[0], test_labels[0])
 test_loss, test_acc = network.evaluate(test_images, test_labels)
 
 print('test_acc:', test_acc)
-
-history_dict = history.history
-loss = history_dict['loss']
-print(history_dict.keys())
-valloss = history_dict['val_loss']
-
-epochs = range(1, len(loss) + 1)
-
-plt.plot(epochs, loss, 'r', label = 'Training loss')
-plt.plot(epochs, valloss, 'b', label = 'Validation loss')
-plt.title('Training and validation loss')
-plt.xlabel('Epochs')
-plt.ylabel('Loss')
-plt.legend()
-
-plt.show()
